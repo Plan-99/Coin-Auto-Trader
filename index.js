@@ -1,0 +1,129 @@
+require('dotenv').config();
+const { log, error } = console;
+const { detectE, startWS } = require('./detect');
+const { loadeInfo, getQty, buy, sellWithPrice, sellWithTime } = require('./order');
+const validate = require('./validate');
+const axios = require('axios');
+const moment = require('moment');
+require('moment-timezone');
+
+const { usdt, api, sec, profit, sloss, sell_option } = process.env;
+const discordWebhookUrl = 'https://discord.com/api/webhooks/1189829300808056913/T0cbtiiJJfhorXO1Z8yF9nVTl8qI1PFxbVpZeTHVzM0uE4ZznqZKtlRTpZPTlhzAIbhD';
+
+axios.post(discordWebhookUrl, {
+  content: `NewCoinListings bot is running... ${getTime()}`
+})
+.catch(err => {
+  console.error('Error sending Discord notification', err);
+});
+
+log('NewCoinListings bot is running...');
+validate();
+log('The bot is waiting for a new coin to be listed in the USDT market.');
+log('When detected, the bot automatically trades as per the configuration.');
+
+startWS();
+detectE.on('NEWLISTING', async (data) => {
+  try {
+    const nStart = new Date().getTime();
+    const { s: symbol, c: closePrice } = { ...data };
+    log(`New symbol ${symbol} detected with price ${closePrice}`);
+
+    axios.post(discordWebhookUrl, {
+      content: `New symbol ${symbol} detected with price ${closePrice} at ${getTime()}`
+    })
+    .catch(err => {
+      console.error('Error sending Discord notification', err);
+    });
+
+    await loadeInfo({ symbol });
+    const qty = getQty({ symbol, price: closePrice, usdt });
+    log(`Trade size is ${qty} for ${usdt} USDT at price ${closePrice} USDT`);
+
+    axios.post(discordWebhookUrl, {
+      content: `Trade size is ${qty} for ${usdt} USDT at price ${closePrice} USDT at ${getTime()}`
+    })
+    .catch(err => {
+      console.error('Error sending Discord notification', err);
+    });
+
+    const bresp = await buy({ keys: { api, sec }, qty, symbol });
+    const nEnd =  new Date().getTime();
+    const nDiff = nEnd - nStart
+    log(`Time gap: ${nDiff}ms`)
+    const buyPrice =
+      bresp.fills.reduce((a, d) => a + d.price * d.qty, 0) /
+      bresp.fills.reduce((a, d) => a + d.qty * 1, 0);
+    log(`Buy price is ${buyPrice}`);
+
+    axios.post(discordWebhookUrl, {
+      content: `Buy price is ${buyPrice} at ${getTime()}`
+    })
+    .catch(err => {
+      console.error('Error sending Discord notification', err);
+    });
+
+    if (sell_option === 'PRICE') {
+      return await sellWithPrice({
+        keys: { api, sec },
+        buyPrice,
+        symbol,
+        qty,
+        profit,
+        sloss,
+      });
+    } else if (sell_option === 'TIME') {
+      return await sellWithTime({
+        keys: { api, sec },
+        symbol,
+        qty,
+      });
+    }
+
+
+  } catch (err) {
+    error(err);
+  }
+});
+
+process.on('SIGINT', () => {
+  axios.post(discordWebhookUrl, {
+    content: `Process was interrupted at ${getTime()}`
+  })
+  .catch(err => {
+    console.error('Error sending Discord notification', err);
+  });
+  process.exit(1);
+});
+
+process.on('exit', (code) => {
+  axios.post(discordWebhookUrl, {
+    content: `Process exited with code: ${code} at ${getTime()}`
+  })
+  .catch(err => {
+    console.error('Error sending Discord notification', err);
+  });
+});
+
+process.on('uncaughtException', (err) => {
+  axios.post(discordWebhookUrl, {
+    content: `Process terminated due to uncaught exception: ${err.message} at ${getTime()}`
+  })
+  .catch(error => {
+    console.error('Error sending Discord notification', error);
+  });
+});
+
+function getTime() {
+  return moment().tz("Asia/Seoul").format('YYYY.MM.DD hh:mm:ss.SSS A');
+}
+
+setInterval(() => {
+  log(`Bot is running... ${getTime()}`);
+  axios.post(discordWebhookUrl, {
+    content: `Bot is running... ${getTime()}`
+  })
+  .catch(err => {
+    console.error('Error sending Discord notification', err);
+  });
+}, 300000); // 300000 milliseconds is equal to 5 minutes
