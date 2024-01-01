@@ -59,6 +59,17 @@ const buy = async ({ keys, symbol, qty }) => {
 let timerId = null;
 let cancelOrder = null;
 
+process.stdin.on('data', (data) => {
+  if (data.toString() === '\n' && timerId) {
+    clearInterval(timerId);
+    console.log('Sell order cancelled.');
+    timerId = null;
+    if (cancelOrder) {
+      cancelOrder(new Error('Sell order cancelled by user.'));
+    }
+  }
+});
+
 const sellWithTime = async ({ keys, symbol, qty, timegap, immediate = false }) => {
   try {
     if (!immediate) {
