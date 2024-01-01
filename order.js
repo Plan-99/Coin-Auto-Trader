@@ -111,7 +111,7 @@ const sellWithTime = ({ keys, symbol, qty, timegap }) => {
       clearInterval(timerId);
 
       await sellRequest({ keys, symbol, qty })
-    }, seconds * 1000);
+    }, timegap * 1000);
   });
 };
 
