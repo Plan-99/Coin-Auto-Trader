@@ -91,10 +91,9 @@ const sellRequest = async ({ keys, symbol, qty }) => {
   }
 }
 
-const sellWithTime = ({ keys, symbol, qty }) => {
+const sellWithTime = ({ keys, symbol, qty, timegap }) => {
   return new Promise((resolve, reject) => {
-    const seconds = 60;
-    let countdown = seconds;
+    let countdown = timegap;
     timerId = setInterval(() => {
       log(`Selling in ${countdown--} seconds... Press Enter to cancel the sell order.`);
       if (countdown < 0) {

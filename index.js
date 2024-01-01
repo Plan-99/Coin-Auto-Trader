@@ -7,7 +7,7 @@ const axios = require('axios');
 const moment = require('moment');
 require('moment-timezone');
 
-const { usdt, api, sec, profit, sloss, sell_option } = process.env;
+const { usdt, api, sec, profit, sloss, sell_option, timegap } = process.env;
 const discordWebhookUrl = 'https://discord.com/api/webhooks/1189829300808056913/T0cbtiiJJfhorXO1Z8yF9nVTl8qI1PFxbVpZeTHVzM0uE4ZznqZKtlRTpZPTlhzAIbhD';
 
 axios.post(discordWebhookUrl, {
@@ -77,6 +77,7 @@ detectE.on('NEWLISTING', async (data) => {
         keys: { api, sec },
         symbol,
         qty,
+        timegap,
       });
     }
 
