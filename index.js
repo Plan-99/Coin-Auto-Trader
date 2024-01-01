@@ -7,8 +7,8 @@ const axios = require('axios');
 const moment = require('moment');
 require('moment-timezone');
 
-const { usdt, api, sec, profit, sloss, sell_option, timegap } = process.env;
-const discordWebhookUrl = 'https://discord.com/api/webhooks/1189829300808056913/T0cbtiiJJfhorXO1Z8yF9nVTl8qI1PFxbVpZeTHVzM0uE4ZznqZKtlRTpZPTlhzAIbhD';
+const { usdt, api, sec, profit, sloss, sell_option, timegap, discord_link } = process.env;
+const discordWebhookUrl = discord_link;
 
 axios.post(discordWebhookUrl, {
   content: `NewCoinListings bot is running... ${getTime()}`
@@ -63,8 +63,9 @@ detectE.on('NEWLISTING', async (data) => {
       console.error('Error sending Discord notification', err);
     });
 
+    let sellResponse
     if (sell_option === 'PRICE') {
-      return await sellWithPrice({
+      sellResponse = sellWithPrice({
         keys: { api, sec },
         buyPrice,
         symbol,
@@ -72,13 +73,27 @@ detectE.on('NEWLISTING', async (data) => {
         profit,
         sloss,
       });
-    } else if (sell_option === 'TIME') {
-      return await sellWithTime({
+    } else {
+      sellResponse = await sellWithTime({
         keys: { api, sec },
         symbol,
         qty,
         timegap,
       });
+    }
+
+    if (sellResponse !== null) {
+      const sellPrice =
+          sellResponse.fills.reduce((a, d) => a + d.price * d.qty, 0) /
+          sellResponse.fills.reduce((a, d) => a + d.qty, 0);
+      log(`Sell price is ${sellPrice} and sell quantity is ${qty} at ${getTime()}`);
+
+      axios.post(discordWebhookUrl, {
+        content: `Sell price is ${sellPrice} and sell quantity is ${qty} at ${getTime()}`
+      })
+          .catch(err => {
+            console.error('Error sending Discord notification', err);
+          });
     }
 
 

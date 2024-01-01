@@ -57,9 +57,33 @@ const buy = async ({ keys, symbol, qty }) => {
 
 
 let timerId = null;
+let cancelOrder = null;
 
-const sellRequest = async ({ keys, symbol, qty }) => {
+const sellWithTime = async ({ keys, symbol, qty, timegap, immediate = false }) => {
   try {
+    if (!immediate) {
+      let countdown = timegap; //time constant
+      timerId = setInterval(() => {
+        console.log(`Selling in ${countdown--} seconds... Press Enter to cancel the sell order.`);
+        if (countdown < 0) {
+          clearInterval(timerId);
+        }
+      }, 1000);
+
+      await new Promise((resolve, reject) => {
+        cancelOrder = reject;
+        setTimeout(resolve, timegap * 1000); //time constant
+      });
+    }
+
+    if (timerId === null) {
+      console.log('Sell order was cancelled.');
+      return null;
+    }
+
+    clearInterval(timerId);
+    cancelOrder = null;
+
     const resp = await binance({
       method: 'POST',
       path: '/api/v3/order',
@@ -75,44 +99,23 @@ const sellRequest = async ({ keys, symbol, qty }) => {
 
     if (resp?.statusCode !== 200) {
       console.error(`Error: ${resp.statusCode}. Full response: ${JSON.stringify(resp)}`);
+      throw new Error(`Error occurred while selling: ${resp.statusCode}`);
     }
 
     const soldPrice = resp.body.fills.reduce((total, fill) => total + (+fill.price * fill.qty), 0) / resp.body.fills.reduce((total, fill) => total + (+fill.qty), 0);
 
     console.log(`Successfully sold ${qty} ${symbol} at an average price of ${soldPrice}.`);
 
+    return resp.body;
   } catch (err) {
-    log(`Error: Sell ${qty} ${symbol} is impossible`)
-    await sellRequest({
-      keys,
-      symbol,
-      qty: qty - 1
-    })
+    console.error(`Error occurred while selling: ${err.message}`);
+    if (qty > 0) {
+      console.log("Reducing quantity by 1 and retrying sell operation...");
+      return sellWithTime({ keys, symbol, qty: qty - 1, timegap, immediate: true });
+    } else {
+      throw err;
+    }
   }
-}
-
-const sellWithTime = ({ keys, symbol, qty, timegap }) => {
-  return new Promise((resolve, reject) => {
-    let countdown = timegap;
-    timerId = setInterval(() => {
-      log(`Selling in ${countdown--} seconds... Press Enter to cancel the sell order.`);
-      if (countdown < 0) {
-        clearInterval(timerId);
-      }
-    }, 1000);
-
-    setTimeout(async () => {
-      // Check if the timer has been cleared
-      if (!timerId) {
-        resolve();
-        return;
-      }
-
-      clearInterval(timerId);
-
-      await sellRequest({ keys, symbol, qty })
-    }, timegap * 1000);
-  });
 };
 
 const sellWithPrice = async ({ keys, buyPrice, symbol, qty, profit, sloss }) => {
