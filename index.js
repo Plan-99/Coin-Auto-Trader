@@ -36,28 +36,18 @@ detectE.on('NEWLISTING', async (data) => {
       console.error('Error sending Discord notification', err);
     });
 
-    await loadeInfo({ symbol });
-    const qty = getQty({ symbol, price: closePrice, usdt });
-    log(`Trade size is ${qty} for ${usdt} USDT at price ${closePrice} USDT`);
-
-    axios.post(discordWebhookUrl, {
-      content: `Trade size is ${qty} for ${usdt} USDT at price ${closePrice} USDT at ${getTime()}`
-    })
-    .catch(err => {
-      console.error('Error sending Discord notification', err);
-    });
-
-    const bresp = await buy({ keys: { api, sec }, qty, symbol });
+    const bresp = await buy({ keys: { api, sec }, usdt, symbol });
     const nEnd =  new Date().getTime();
     const nDiff = nEnd - nStart
     log(`Time gap: ${nDiff}ms`)
     const buyPrice =
       bresp.fills.reduce((a, d) => a + d.price * d.qty, 0) /
       bresp.fills.reduce((a, d) => a + d.qty * 1, 0);
-    log(`Buy price is ${buyPrice}`);
+    const qty = bresp.executedQty;
+    log(`Buy price is ${buyPrice} and qty is ${qty}`);
 
     axios.post(discordWebhookUrl, {
-      content: `Buy price is ${buyPrice} at ${getTime()}`
+      content: `Buy price is ${buyPrice} at ${getTime()} and qty is ${qty}`
     })
     .catch(err => {
       console.error('Error sending Discord notification', err);

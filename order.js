@@ -33,7 +33,7 @@ const getQty = ({ symbol, price, usdt }) => {
   return NP.strip(Math.floor(qty * 10 ** qstep) / 10 ** qstep);
 };
 
-const buy = async ({ keys, symbol, qty }) => {
+const buy = async ({ keys, symbol, usdt }) => {
   try {
     // keys: { api, sec }, quantity, symbol
     const resp = await binance({
@@ -41,11 +41,12 @@ const buy = async ({ keys, symbol, qty }) => {
       path: '/api/v3/order',
       keys,
       params: {
-        quantity: scientificToDecimal(qty),
+        // quantity: scientificToDecimal(qty),
         symbol,
         side: 'BUY',
         type: 'MARKET',
         newOrderRespType: 'FULL',
+        quoteOrderQty: usdt,
       },
     });
     if (resp?.statusCode !== 200) throw resp;
