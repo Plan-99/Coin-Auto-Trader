@@ -15,9 +15,9 @@ const refreshSymbols = async () => {
       (await got(`https://api.binance.com/api/v3/exchangeInfo`))?.body
     );
     resp.symbols.forEach(({ symbol, status }) => {
-      // if (symbol === 'XRPUSDT') {
-      //   return
-      // }
+      if (symbol === 'XRPUSDT') {
+        return
+      }
       if (status === 'TRADING') symbols[symbol] = 1;
     });
   } catch (err) {
