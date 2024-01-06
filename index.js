@@ -1,6 +1,7 @@
 require('dotenv').config();
 const { log, error } = console;
 const { detectE, startWS } = require('./detect');
+const { startBithumbDetect } = require('./detectBithumbNotice');
 const { loadeInfo, getQty, buy, sellWithPrice, sellWithTime } = require('./order');
 const validate = require('./validate');
 const axios = require('axios');
@@ -23,6 +24,7 @@ log('The bot is waiting for a new coin to be listed in the USDT market.');
 log('When detected, the bot automatically trades as per the configuration.');
 
 startWS();
+startBithumbDetect();
 detectE.on('NEWLISTING', async (data) => {
   try {
     const nStart = new Date().getTime();
