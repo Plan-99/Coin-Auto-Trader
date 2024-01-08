@@ -8,7 +8,7 @@ const axios = require('axios');
 const moment = require('moment');
 require('moment-timezone');
 
-const { usdt, api, sec, profit, sloss, sell_option, timegap, discord_link } = process.env;
+const { usdt, api, sec, profit, sloss, sell_option, timegap, discord_link, detection_type } = process.env;
 const discordWebhookUrl = discord_link;
 
 axios.post(discordWebhookUrl, {
@@ -23,9 +23,12 @@ validate();
 log('The bot is waiting for a new coin to be listed in the USDT market.');
 log('When detected, the bot automatically trades as per the configuration.');
 
-startWS();
-startBithumbDetect();
-startBithumbDetect(true);
+if (detection_type === 'new_coin') {
+  startWS();
+} else if (detection_type === 'notice') {
+  startBithumbDetect();
+  startBithumbDetect(true);
+}
 detectE.on('NEWLISTING', async (data) => {
   try {
     const nStart = new Date().getTime();
