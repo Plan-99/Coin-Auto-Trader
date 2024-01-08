@@ -73,6 +73,7 @@ const startBithumbDetect = async(mobile = false) => {
     }
     console.log(`Last Notice title is ${lastNoticeInfo.title}`, getTime())
     setInterval(async () => {
+        console.log(`network: ${mobile ? 'mobile ' : ''}bithumb`, getTime())
         let noticeInfo
         if (mobile) {
             noticeInfo = await getLastNoticeInfoMobile(is_test)
