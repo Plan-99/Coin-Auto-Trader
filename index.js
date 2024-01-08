@@ -27,7 +27,6 @@ if (detection_type === 'new_coin') {
   startWS();
 } else if (detection_type === 'notice') {
   startBithumbDetect();
-  startBithumbDetect(true);
 }
 detectE.on('NEWLISTING', async (data) => {
   try {

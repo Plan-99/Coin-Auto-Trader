@@ -46,7 +46,6 @@ const getLastNoticeInfoMobile = async (test = false) => {
         for (let i = 1; i < notices.length; i++) {
             const el = notices[i];
             const classList = $(el).attr('class');
-            // console.log(classList);
 
             if (!classList || !classList.includes('noticeList_notice-list__link--fixed__5EvPe')) {
                 const script = $(el).attr('href');
@@ -54,7 +53,7 @@ const getLastNoticeInfoMobile = async (test = false) => {
                 const title = $('p', el).text().trim();
                 // 현재 시간 (UTC)에 9시간 더하기
                 return {
-                    title: test ? '[마켓 추가] 엑셀라(WAXL), 일드길드게임즈(YGGVSBDV) 원화 마켓 추가' : title,
+                    title: test ? '[마켓 추가] 엑셀라(WAXL), 일드길드게임즈(RWEWD) 원화 마켓 추가' : title,
                     id: test ? 100 : id,
                 }
             }
@@ -64,36 +63,39 @@ const getLastNoticeInfoMobile = async (test = false) => {
     }
 };
 
-const startBithumbDetect = async(mobile = false) => {
-    let lastNoticeInfo
-    if (mobile) {
-        lastNoticeInfo = await getLastNoticeInfoMobile()
-    } else {
-        lastNoticeInfo = await getLastNoticeInfo()
-    }
-    console.log(`Last Notice title is ${lastNoticeInfo.title}`, getTime())
+const startBithumbDetect = async() => {
+    let lastNoticeInfoMobile = await getLastNoticeInfoMobile()
+    let lastNoticeInfo = await getLastNoticeInfo()
+    console.log(`Last Notice title for PC is ${lastNoticeInfo.title}`, getTime())
+    console.log(`Last Notice title for Mobile is ${lastNoticeInfoMobile.title}`, getTime())
+    const symbols = [];
     setInterval(async () => {
-        let noticeInfo
-        if (mobile) {
-            noticeInfo = await getLastNoticeInfoMobile(is_test)
-        } else {
-            noticeInfo = await getLastNoticeInfo(is_test)
-        }
-        if (lastNoticeInfo.id === noticeInfo.id) {
+        let noticeInfoMobile, noticeInfo
+        noticeInfoMobile = await getLastNoticeInfoMobile(is_test)
+        noticeInfo = await getLastNoticeInfo(is_test)
+        if (lastNoticeInfo.id === noticeInfo.id && lastNoticeInfoMobile.id === noticeInfoMobile.id) {
             return;
         }
-        if (!noticeInfo.title.includes('[마켓 추가]')) {
+        if (!noticeInfoMobile.title.includes('[마켓 추가]') && !noticeInfoMobile.title.includes('[마켓 추가]')) {
             return;
         }
-        console.log(`New Notice title is ${noticeInfo.title}`, getTime())
-        const new_listing_symbol = noticeInfo.title.match(/\(([^)]+)\)/g);
+        const newNoticeTitle = lastNoticeInfo.id !== noticeInfo.id ? noticeInfo.title : noticeInfoMobile.title
+        const from = lastNoticeInfo.id !== noticeInfo.id ? 'pc' : 'mobile'
+        console.log(`New Notice title is ${newNoticeTitle} from Bithumb ${from}`, getTime())
+        const new_listing_symbol = newNoticeTitle.match(/\(([^)]+)\)/g);
         new_listing_symbol.forEach((e) => {
+            const symbol = e.replace('(', '').replace(')', '');
+            if (symbols.includes(symbol)) {
+                return
+            }
+            symbols.push(symbol)
             detectE.emit('NEWLISTING', {
                 s: e.replace('(', '').replace(')', '') + 'USDT',
                 c: null,
             });
         })
         lastNoticeInfo = noticeInfo
+        lastNoticeInfoMobile = noticeInfoMobile
     }, 1000)
 }
 
