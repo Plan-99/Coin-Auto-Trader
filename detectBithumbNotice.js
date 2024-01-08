@@ -89,7 +89,7 @@ const startBithumbDetect = async(mobile = false) => {
         const new_listing_symbol = noticeInfo.title.match(/\(([^)]+)\)/g);
         new_listing_symbol.forEach((e) => {
             detectE.emit('NEWLISTING', {
-                s: e + 'USDT',
+                s: e.replace('(', '').replace(')', '') + 'USDT',
                 c: null,
             });
         })
