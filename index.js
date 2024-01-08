@@ -25,6 +25,7 @@ log('When detected, the bot automatically trades as per the configuration.');
 
 startWS();
 startBithumbDetect();
+startBithumbDetect(true);
 detectE.on('NEWLISTING', async (data) => {
   try {
     const nStart = new Date().getTime();
@@ -87,10 +88,14 @@ detectE.on('NEWLISTING', async (data) => {
             console.error('Error sending Discord notification', err);
           });
     }
-
-
   } catch (err) {
-    error(err);
+    log(err, getTime());
+    axios.post(discordWebhookUrl, {
+      content: `Error Buying New Coin: ${err.message}`
+    })
+        .catch(() => {
+          console.error('Error sending Discord notification');
+        });
   }
 });
 
