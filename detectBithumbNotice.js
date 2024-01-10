@@ -4,10 +4,11 @@ const axios = require("axios");
 const cheerio = require("cheerio");
 const {detectE} = require("./detect");
 const moment = require("moment");
-let { is_test } = process.env;
+let { is_test, discord_link } = process.env;
 is_test = is_test === 'true'
 
-const getLastNoticeInfo = async (test = false) => {
+
+const getLastNoticeInfo = async (test = false, alert = false) => {
     try {
         const res = await axios.get('https://cafe.bithumb.com/view/boards/43', {
             headers: {
@@ -33,11 +34,19 @@ const getLastNoticeInfo = async (test = false) => {
             }
         }
     } catch (error) {
-        console.error(`Error occurred while checking Bithumb notices: ${error.message}`, getTime());
+        if (alert) {
+            console.error(`Error occurred while checking Bithumb notices: ${error.message}`, getTime());
+            axios.post(discord_link, {
+                content: `Error occurred while checking Bithumb notices: ${error.message}, ${getTime()}`
+            })
+                .catch(err => {
+                    console.error('Error sending Discord notification', err);
+                });
+        }
     }
 };
 
-const getLastNoticeInfoMobile = async (test = false) => {
+const getLastNoticeInfoMobile = async (test = false, alert = false) => {
     try {
         const res = await axios.get('https://m-feed.bithumb.com/notice');
         const $ = cheerio.load(res.data);
@@ -59,7 +68,15 @@ const getLastNoticeInfoMobile = async (test = false) => {
             }
         }
     } catch (error) {
-        console.error(`Error occurred while checking Bithumb notices Mobile: ${error.message}`, getTime());
+        if (alert) {
+            console.error(`Error occurred while checking Bithumb notices Mobile: ${error.message}`, getTime());
+            axios.post(discord_link, {
+                content: `Error occurred while checking Bithumb notices Mobile: ${error.message}, ${getTime()}`
+            })
+                .catch(err => {
+                    console.error('Error sending Discord notification', err);
+                });
+        }
     }
 };
 
@@ -69,10 +86,11 @@ const startBithumbDetect = async() => {
     console.log(`Last Notice title for PC is ${lastNoticeInfo.title}`, getTime())
     console.log(`Last Notice title for Mobile is ${lastNoticeInfoMobile.title}`, getTime())
     const symbols = [];
+    let i = 0
     setInterval(async () => {
         let noticeInfoMobile, noticeInfo
-        noticeInfoMobile = await getLastNoticeInfoMobile(is_test)
-        noticeInfo = await getLastNoticeInfo(is_test)
+        noticeInfoMobile = await getLastNoticeInfoMobile(is_test, i % 60 === 0)
+        noticeInfo = await getLastNoticeInfo(is_test, i % 60 === 0)
         if (lastNoticeInfo.id === noticeInfo.id && lastNoticeInfoMobile.id === noticeInfoMobile.id) {
             return;
         }
@@ -94,6 +112,7 @@ const startBithumbDetect = async() => {
                 c: null,
             });
         })
+        i++;
         lastNoticeInfo = noticeInfo
         lastNoticeInfoMobile = noticeInfoMobile
     }, 1000)
