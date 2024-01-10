@@ -12,7 +12,8 @@ const getLastNoticeInfo = async (test = false, alert = false) => {
     try {
         const res = await axios.get('https://cafe.bithumb.com/view/boards/43', {
             headers: {
-                'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+                'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'Referer': 'https://cafe.bithumb.com/view/board-contents/1644396',
             }
         });
         const $ = cheerio.load(res.data);
@@ -48,7 +49,12 @@ const getLastNoticeInfo = async (test = false, alert = false) => {
 
 const getLastNoticeInfoMobile = async (test = false, alert = false) => {
     try {
-        const res = await axios.get('https://m-feed.bithumb.com/notice');
+        const res = await axios.get('https://m-feed.bithumb.com/notice', {
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'Referer': 'https://cafe.bithumb.com/view/board-contents/1644396',
+            }
+        });
         const $ = cheerio.load(res.data);
         const notices = $('.noticeList_notice-item-list__link__rVBKl');
 
