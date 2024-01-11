@@ -8,7 +8,7 @@ let { is_test, discord_link } = process.env;
 is_test = is_test === 'true'
 
 
-const getLastNoticeInfo = async (test = false, alert = false) => {
+const getFromBithumb = async (test = false, alert = false) => {
     try {
         const res = await axios.get('https://cafe.bithumb.com/view/boards/43', {
             headers: {
@@ -29,7 +29,7 @@ const getLastNoticeInfo = async (test = false, alert = false) => {
                 const title = $('td.one-line a', el).text().trim();
                 // 현재 시간 (UTC)에 9시간 더하기
                 return {
-                    title: test ? '[마켓 추가] 엑셀라(WAXL), 일드길드게임즈(YGGVSBDV) 원화 마켓 추가' : title,
+                    title: test ? '[마켓 추가] 엑셀라(XRP), 일드길드게임즈(TRX) 원화 마켓 추가' : title,
                     id: test ? 100 : id,
                 }
             }
@@ -47,7 +47,7 @@ const getLastNoticeInfo = async (test = false, alert = false) => {
     }
 };
 
-const getLastNoticeInfoMobile = async (test = false, alert = false) => {
+const getFromBithumbMobile = async (test = false, alert = false) => {
     try {
         const res = await axios.get('https://m-feed.bithumb.com/notice', {
             headers: {
@@ -87,16 +87,16 @@ const getLastNoticeInfoMobile = async (test = false, alert = false) => {
 };
 
 const startBithumbDetect = async() => {
-    let lastNoticeInfoMobile = await getLastNoticeInfoMobile()
-    let lastNoticeInfo = await getLastNoticeInfo()
+    let lastNoticeInfoMobile = await getFromBithumbMobile()
+    let lastNoticeInfo = await getFromBithumb()
     console.log(`Last Notice title for PC is ${lastNoticeInfo.title}`, getTime())
     console.log(`Last Notice title for Mobile is ${lastNoticeInfoMobile.title}`, getTime())
     const symbols = [];
     let i = 0
     setInterval(async () => {
         let noticeInfoMobile, noticeInfo
-        noticeInfoMobile = await getLastNoticeInfoMobile(is_test, i % 60 === 0)
-        noticeInfo = await getLastNoticeInfo(is_test, i % 60 === 0)
+        noticeInfoMobile = await getFromBithumbMobile(is_test, i % 60 === 0)
+        noticeInfo = await getFromBithumb(is_test, i % 60 === 0)
         if (lastNoticeInfo.id === noticeInfo.id && lastNoticeInfoMobile.id === noticeInfoMobile.id) {
             return;
         }

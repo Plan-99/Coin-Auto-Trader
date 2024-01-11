@@ -1,7 +1,7 @@
 require('dotenv').config();
 const { log, error } = console;
 const { detectE, startWS } = require('./detect');
-const { startBithumbDetect } = require('./detectBithumbNotice');
+const { startBithumbDetect } = require('./detectNotice');
 const { loadeInfo, getQty, buy, sellWithPrice, sellWithTime } = require('./order');
 const validate = require('./validate');
 const axios = require('axios');

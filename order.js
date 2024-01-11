@@ -56,45 +56,21 @@ const buy = async ({ keys, symbol, usdt }) => {
   }
 };
 
-
-let timerId = null;
-let cancelOrder = null;
-
-process.stdin.on('data', (data) => {
-  if (data.toString() === '\n' && timerId) {
-    clearInterval(timerId);
-    console.log('Sell order cancelled.');
-    timerId = null;
-    if (cancelOrder) {
-      cancelOrder(new Error('Sell order cancelled by user.'));
-    }
-  }
-});
-
 const sellWithTime = async ({ keys, symbol, qty, timegap, immediate = false }) => {
   try {
     if (!immediate) {
       let countdown = timegap; //time constant
-      timerId = setInterval(() => {
+      const timerId = setInterval(() => {
         console.log(`Selling in ${countdown--} seconds... Press Enter to cancel the sell order.`);
-        if (countdown < 0) {
+        if (countdown < 1) {
           clearInterval(timerId);
         }
       }, 1000);
 
       await new Promise((resolve, reject) => {
-        cancelOrder = reject;
         setTimeout(resolve, timegap * 1000); //time constant
       });
     }
-
-    if (timerId === null) {
-      console.log('Sell order was cancelled.');
-      return null;
-    }
-
-    clearInterval(timerId);
-    cancelOrder = null;
 
     const resp = await binance({
       method: 'POST',
