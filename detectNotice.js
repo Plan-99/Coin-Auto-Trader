@@ -29,7 +29,7 @@ const getFromBithumb = async (test = false, alert = false) => {
                 const title = $('td.one-line a', el).text().trim();
                 // 현재 시간 (UTC)에 9시간 더하기
                 return {
-                    title: test ? '[마켓 추가] 엑셀라(XRP), 일드길드게임즈(TRX) 원화 마켓 추가' : title,
+                    title: test ? '[마켓 추가] 엑셀라(WAXL), 일드길드게임즈(RWEWD) 원화 마켓 추가' : title,
                     id: test ? 100 : id,
                 }
             }
@@ -89,8 +89,8 @@ const getFromBithumbMobile = async (test = false, alert = false) => {
 const startBithumbDetect = async() => {
     let lastNoticeInfoMobile = await getFromBithumbMobile()
     let lastNoticeInfo = await getFromBithumb()
-    console.log(`Last Notice title for PC is ${lastNoticeInfo.title}`, getTime())
-    console.log(`Last Notice title for Mobile is ${lastNoticeInfoMobile.title}`, getTime())
+    console.log(`Last Notice title for Bithumb PC is ${lastNoticeInfo.title}`, getTime())
+    console.log(`Last Notice title for Bithumb Mobile is ${lastNoticeInfoMobile.title}`, getTime())
     const symbols = [];
     let i = 0
     setInterval(async () => {
@@ -124,8 +124,67 @@ const startBithumbDetect = async() => {
     }, 1000)
 }
 
+const getFromUpbit = async(test = false, alert = false) => {
+    try {
+        const res = await axios.get('https://api-manager.upbit.com/api/v1/notices?page=1&per_page=20&thread_name=general', {
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'Referer': 'https://cafe.bithumb.com/view/board-contents/1644396',
+            }
+        });
+        const noticeObj = res.data.data.list[0]
+        return {
+            title: test ? '[마켓 추가] 엑셀라(WAXL), 일드길드게임즈(RWEWD) 원화 마켓 추가' : noticeObj.title,
+            id: test ? 100 : noticeObj.id,
+        }
+    } catch (error) {
+        if (alert) {
+            console.error(`Error occurred while checking Bithumb notices Mobile: ${error.message}`, getTime());
+            axios.post(discord_link, {
+                content: `Error occurred while checking Bithumb notices Mobile: ${error.message}, ${getTime()}`
+            })
+                .catch(err => {
+                    console.error('Error sending Discord notification', err);
+                });
+        }
+    }
+}
+
+const startUpbitDetect = async() => {
+    let lastNoticeInfo = await getFromUpbit()
+    console.log(`Last Notice title for Upbit is ${lastNoticeInfo.title}`, getTime())
+    const symbols = [];
+    let i = 0
+    setInterval(async () => {
+        let noticeInfo
+        noticeInfo = await getFromUpbit(is_test, i % 60 === 0)
+        if (lastNoticeInfo.id === noticeInfo.id) {
+            return;
+        }
+        if (!noticeInfo.title.includes('[거래]') || !noticeInfo.title.includes('추가')) {
+            return;
+        }
+        console.log(`New Notice title is ${noticeInfo.title} from Upbit`, getTime())
+        const new_listing_symbol = noticeInfo.title.match(/\(([^)]+)\)/g);
+        new_listing_symbol.forEach((e) => {
+            const symbol = e.replace('(', '').replace(')', '');
+            if (symbols.includes(symbol)) {
+                return
+            }
+            symbols.push(symbol)
+            detectE.emit('NEWLISTING', {
+                s: e.replace('(', '').replace(')', '') + 'USDT',
+                c: null,
+            });
+        })
+        i++;
+        lastNoticeInfo = noticeInfo
+    }, 5000)
+}
+
+
 function getTime() {
     return moment().tz("Asia/Seoul").format('YYYY.MM.DD hh:mm:ss.SSS A');
 }
 
-module.exports = { startBithumbDetect };
+module.exports = { startBithumbDetect, startUpbitDetect };

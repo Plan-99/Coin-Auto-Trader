@@ -1,7 +1,7 @@
 require('dotenv').config();
 const { log, error } = console;
 const { detectE, startWS } = require('./detect');
-const { startBithumbDetect } = require('./detectNotice');
+const { startBithumbDetect, startUpbitDetect } = require('./detectNotice');
 const { loadeInfo, getQty, buy, sellWithPrice, sellWithTime } = require('./order');
 const validate = require('./validate');
 const axios = require('axios');
@@ -26,6 +26,7 @@ log('When detected, the bot automatically trades as per the configuration.');
 if (detection_type === 'new_coin') {
   startWS();
 } else if (detection_type === 'notice') {
+  startUpbitDetect();
   startBithumbDetect();
 }
 detectE.on('NEWLISTING', async (data) => {
