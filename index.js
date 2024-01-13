@@ -75,6 +75,8 @@ detectE.on('NEWLISTING', async (data) => {
         symbol,
         qty,
         timegap,
+        buyPrice,
+        sloss,
       });
     }
 

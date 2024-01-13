@@ -10,10 +10,9 @@ const NP = require('number-precision');
 NP.enableBoundaryChecking(false);
 const scientificToDecimal = require('scientific-to-decimal');
 
-let eInfo = {};
-
 const loadeInfo = async ({ symbol }) => {
   try {
+    let eInfo = {};
     const resp = await binance({
       method: 'GET',
       path: '/api/v3/exchangeInfo',
@@ -22,6 +21,7 @@ const loadeInfo = async ({ symbol }) => {
     const einfoSymbol = resp.body.symbols.find((s) => s?.symbol === symbol);
     if (!einfoSymbol) throw 'Symbol missing in Exchange Info API';
     eInfo[symbol] = { ...einfoSymbol };
+    return eInfo;
   } catch (err) {
     throw err;
   }
@@ -56,9 +56,37 @@ const buy = async ({ keys, symbol, usdt }) => {
   }
 };
 
-const sellWithTime = async ({ keys, symbol, qty, timegap, immediate = false }) => {
+const sellWithTime = async ({ keys, symbol, qty, timegap, buyPrice, sloss, immediate = false }) => {
   try {
+    let resp;
     if (!immediate) {
+      const eInfo = await loadeInfo({ symbol });
+      const pstep = Math.log10(1 / eInfo[symbol]['filters'][0]['tickSize']);
+      const stopPrice = NP.strip(
+          Math.floor(buyPrice * (1 - sloss / 100) * 10 ** pstep) / 10 ** pstep
+      );
+      resp = await binance({
+        method: 'POST',
+        path: '/api/v3/order',
+        keys,
+        params: {
+          quantity: scientificToDecimal(qty),
+          symbol,
+          side: 'SELL',
+          type: 'STOP_LOSS_LIMIT',
+          newOrderRespType: 'FULL',
+          stopPrice,
+          timeInForce: 'GTC',
+          price: stopPrice,
+        },
+      });
+
+
+      if (resp?.statusCode !== 200) {
+        console.error(`Error: ${resp.statusCode}. Full response: ${JSON.stringify(resp)}`);
+      }
+
+      const orderId = resp.body.orderId;
       let countdown = timegap; //time constant
       const timerId = setInterval(() => {
         console.log(`Selling in ${countdown--} seconds... Press Enter to cancel the sell order.`);
@@ -70,9 +98,20 @@ const sellWithTime = async ({ keys, symbol, qty, timegap, immediate = false }) =
       await new Promise((resolve, reject) => {
         setTimeout(resolve, timegap * 1000); //time constant
       });
+      
+      await binance({
+        method: 'DELETE',
+        path: '/api/v3/order',
+        keys,
+        data: {
+          symbol,
+          orderId,
+          originClientOrderId: null,
+        },
+      });
     }
 
-    const resp = await binance({
+    resp = await binance({
       method: 'POST',
       path: '/api/v3/order',
       keys,
@@ -99,7 +138,7 @@ const sellWithTime = async ({ keys, symbol, qty, timegap, immediate = false }) =
     console.error(`Error occurred while selling: ${err.message}`);
     if (qty > 0) {
       console.log("Reducing quantity by 1 and retrying sell operation...");
-      return sellWithTime({ keys, symbol, qty: qty - 1, timegap, immediate: true });
+      return sellWithTime({ keys, symbol, qty: qty - 1, timegap, buyPrice, sloss, immediate: true });
     } else {
       throw err;
     }

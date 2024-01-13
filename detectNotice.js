@@ -134,14 +134,14 @@ const getFromUpbit = async(test = false, alert = false) => {
         });
         const noticeObj = res.data.data.list[0]
         return {
-            title: test ? '[마켓 추가] 엑셀라(WAXL), 일드길드게임즈(RWEWD) 원화 마켓 추가' : noticeObj.title,
+            title: test ? '[거래] 엑셀라(XRP) 마켓 추가' : noticeObj.title,
             id: test ? 100 : noticeObj.id,
         }
     } catch (error) {
         if (alert) {
-            console.error(`Error occurred while checking Bithumb notices Mobile: ${error.message}`, getTime());
+            console.error(`Error occurred while checking Upbit notices: ${error.message}`, getTime());
             axios.post(discord_link, {
-                content: `Error occurred while checking Bithumb notices Mobile: ${error.message}, ${getTime()}`
+                content: `Error occurred while checking Upbit notices: ${error.message}, ${getTime()}`
             })
                 .catch(err => {
                     console.error('Error sending Discord notification', err);
