@@ -108,7 +108,7 @@ const sellWithTime = async ({ keys, symbol, qty, timegap, buyPrice, sloss, immed
       if (orderResp.body.status === 'FILLED') {
         isOrderFilled = true;
         logAndSend(`Order filled: ${symbol} has been sold.`);
-        logAndSend(`Successfully sold ${orderResp.body.qty} ${symbol} at an average price of ${orderResp.body.price}.`);
+        logAndSend(`Successfully sold ${orderResp.body.origQty} ${symbol} at an average price of ${orderResp.body.price}.`);
         clearInterval(timerId);
         return orderResp.body;
       } else {
