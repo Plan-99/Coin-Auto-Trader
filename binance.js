@@ -37,7 +37,7 @@ module.exports = async (event) => {
     };
     log(url)
     const resp =
-      method === 'GET' ? await got(url, options) : await got.post(url, options);
+      method === 'GET' ? await got(url, options) : (method === 'POST' ? await got.post(url, options) : await got.delete(url, options));
     return { statusCode: resp.statusCode, body: JSON.parse(resp.body) };
   } catch (err) {
     throw err;

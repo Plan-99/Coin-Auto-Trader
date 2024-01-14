@@ -100,7 +100,7 @@ const startBithumbDetect = async() => {
         if (lastNoticeInfo.id === noticeInfo.id && lastNoticeInfoMobile.id === noticeInfoMobile.id) {
             return;
         }
-        if (!noticeInfoMobile.title.includes('[마켓 추가]') && !noticeInfoMobile.title.includes('[마켓 추가]')) {
+        if (!noticeInfoMobile.title.includes('[마켓 추가]') && !noticeInfo.title.includes('[마켓 추가]')) {
             return;
         }
         const newNoticeTitle = lastNoticeInfo.id !== noticeInfo.id ? noticeInfo.title : noticeInfoMobile.title

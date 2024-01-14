@@ -57,10 +57,13 @@ const buy = async ({ keys, symbol, usdt }) => {
 };
 
 const sellWithTime = async ({ keys, symbol, qty, timegap, buyPrice, sloss, immediate = false }) => {
-  try {
-    let resp;
-    if (!immediate) {
-      const eInfo = await loadeInfo({ symbol });
+  let resp;
+  let slossSell = false;
+  let slossSellDelete = false;
+  let orderId = '';
+  if (!immediate) {
+    const eInfo = await loadeInfo({symbol});
+    try {
       const pstep = Math.log10(1 / eInfo[symbol]['filters'][0]['tickSize']);
       const stopPrice = NP.strip(
           Math.floor(buyPrice * (1 - sloss / 100) * 10 ** pstep) / 10 ** pstep
@@ -80,67 +83,75 @@ const sellWithTime = async ({ keys, symbol, qty, timegap, buyPrice, sloss, immed
           price: stopPrice,
         },
       });
+      orderId = resp.body.orderId;
+      slossSell = true;
+    } catch (err) {
+      console.error(`Error while SLOSS Selling: ${err.message}`);
+      return sellWithTime({ keys, symbol, qty: qty - 1, timegap, buyPrice, sloss, immediate: false });
+    }
+    let countdown = timegap; //time constant
+    const timerId = setInterval(() => {
+      console.log(`Selling in ${countdown--} seconds... Press Enter to cancel the sell order.`);
+      if (countdown < 1) {
+        clearInterval(timerId);
+      }
+    }, 1000);
 
+    await new Promise((resolve, reject) => {
+      setTimeout(resolve, timegap * 1000); //time constant
+    });
+    if (slossSell) {
+      try {
+        await binance({
+          method: 'DELETE',
+          path: '/api/v3/order',
+          keys,
+          params: {
+            symbol,
+            orderId,
+          },
+        });
+        slossSellDelete = true;
+      } catch (err) {
+        console.error(`Error while Delete SLOSS Order: ${err.message}`);
+      }
+    }
+  }
+
+
+  if (slossSell && slossSellDelete) {
+    try {
+      resp = await binance({
+        method: 'POST',
+        path: '/api/v3/order',
+        keys,
+        params: {
+          quantity: scientificToDecimal(qty),
+          symbol,
+          side: 'SELL',
+          type: 'MARKET',
+          newOrderRespType: 'FULL',
+        },
+      });
 
       if (resp?.statusCode !== 200) {
         console.error(`Error: ${resp.statusCode}. Full response: ${JSON.stringify(resp)}`);
+        throw new Error(`Error occurred while selling: ${resp.statusCode}`);
       }
 
-      const orderId = resp.body.orderId;
-      let countdown = timegap; //time constant
-      const timerId = setInterval(() => {
-        console.log(`Selling in ${countdown--} seconds... Press Enter to cancel the sell order.`);
-        if (countdown < 1) {
-          clearInterval(timerId);
-        }
-      }, 1000);
+      const soldPrice = resp.body.fills.reduce((total, fill) => total + (+fill.price * fill.qty), 0) / resp.body.fills.reduce((total, fill) => total + (+fill.qty), 0);
 
-      await new Promise((resolve, reject) => {
-        setTimeout(resolve, timegap * 1000); //time constant
-      });
-      
-      await binance({
-        method: 'DELETE',
-        path: '/api/v3/order',
-        keys,
-        data: {
-          symbol,
-          orderId,
-          originClientOrderId: null,
-        },
-      });
-    }
+      console.log(`Successfully sold ${qty} ${symbol} at an average price of ${soldPrice}.`);
 
-    resp = await binance({
-      method: 'POST',
-      path: '/api/v3/order',
-      keys,
-      params: {
-        quantity: scientificToDecimal(qty),
-        symbol,
-        side: 'SELL',
-        type: 'MARKET',
-        newOrderRespType: 'FULL',
-      },
-    });
-
-    if (resp?.statusCode !== 200) {
-      console.error(`Error: ${resp.statusCode}. Full response: ${JSON.stringify(resp)}`);
-      throw new Error(`Error occurred while selling: ${resp.statusCode}`);
-    }
-
-    const soldPrice = resp.body.fills.reduce((total, fill) => total + (+fill.price * fill.qty), 0) / resp.body.fills.reduce((total, fill) => total + (+fill.qty), 0);
-
-    console.log(`Successfully sold ${qty} ${symbol} at an average price of ${soldPrice}.`);
-
-    return resp.body;
-  } catch (err) {
-    console.error(`Error occurred while selling: ${err.message}`);
-    if (qty > 0) {
-      console.log("Reducing quantity by 1 and retrying sell operation...");
-      return sellWithTime({ keys, symbol, qty: qty - 1, timegap, buyPrice, sloss, immediate: true });
-    } else {
-      throw err;
+      return resp.body;
+    } catch (err) {
+      console.error(`Error occurred while selling: ${err.message}`);
+      if (qty > 0) {
+        console.log("Reducing quantity by 1 and retrying sell operation...");
+        return sellWithTime({ keys, symbol, qty: qty - 1, timegap, buyPrice, sloss, immediate: true });
+      } else {
+        throw err;
+      }
     }
   }
 };
