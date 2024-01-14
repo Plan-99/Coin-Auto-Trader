@@ -64,7 +64,7 @@ const sellWithTime = async ({ keys, symbol, qty, timegap, buyPrice, sloss, immed
   let slossSell = false;
   let slossSellDelete = false;
   let orderId = '';
-  let isOrderFilled = true;
+  let isOrderFilled = false;
   if (!immediate) {
     const eInfo = await loadeInfo({symbol});
     try {
