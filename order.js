@@ -9,6 +9,9 @@ const binance = require('./binance');
 const NP = require('number-precision');
 NP.enableBoundaryChecking(false);
 const scientificToDecimal = require('scientific-to-decimal');
+const axios = require("axios");
+const moment = require("moment");
+let { discord_link } = process.env;
 
 const loadeInfo = async ({ symbol }) => {
   try {
@@ -61,6 +64,7 @@ const sellWithTime = async ({ keys, symbol, qty, timegap, buyPrice, sloss, immed
   let slossSell = false;
   let slossSellDelete = false;
   let orderId = '';
+  let isOrderFilled = true;
   if (!immediate) {
     const eInfo = await loadeInfo({symbol});
     try {
@@ -86,16 +90,38 @@ const sellWithTime = async ({ keys, symbol, qty, timegap, buyPrice, sloss, immed
       orderId = resp.body.orderId;
       slossSell = true;
     } catch (err) {
-      console.error(`Error while SLOSS Selling: ${err.message}`);
+      logAndSend(`Error while SLOSS Selling: ${err.message}`);
       return sellWithTime({ keys, symbol, qty: qty - 1, timegap, buyPrice, sloss, immediate: false });
     }
     let countdown = timegap; //time constant
-    const timerId = setInterval(() => {
-      console.log(`Selling in ${countdown--} seconds... Press Enter to cancel the sell order.`);
-      if (countdown < 1) {
+    let orderResp = {};
+    const timerId = setInterval(async() => {
+      orderResp = await binance({
+        method: 'GET',
+        path: `/api/v3/order`,
+        keys,
+        params: {
+          symbol,
+          orderId,
+        },
+      });
+      if (orderResp.body.status === 'FILLED') {
+        isOrderFilled = true;
+        logAndSend(`Order filled: ${symbol} has been sold.`);
+        logAndSend(`Successfully sold ${orderResp.body.qty} ${symbol} at an average price of ${orderResp.body.price}.`);
         clearInterval(timerId);
+        return orderResp.body;
+      } else {
+        logAndSend(`Selling ${symbol} in ${countdown--} seconds... Press Enter to cancel.`);
+        if (countdown < 1) {
+          clearInterval(timerId);
+        }
       }
     }, 1000);
+
+    if (isOrderFilled) {
+      return orderResp.body
+    }
 
     await new Promise((resolve, reject) => {
       setTimeout(resolve, timegap * 1000); //time constant
@@ -113,7 +139,7 @@ const sellWithTime = async ({ keys, symbol, qty, timegap, buyPrice, sloss, immed
         });
         slossSellDelete = true;
       } catch (err) {
-        console.error(`Error while Delete SLOSS Order: ${err.message}`);
+        logAndSend(`Error while Delete SLOSS Order: ${err.message}`);
       }
     }
   }
@@ -135,19 +161,19 @@ const sellWithTime = async ({ keys, symbol, qty, timegap, buyPrice, sloss, immed
       });
 
       if (resp?.statusCode !== 200) {
-        console.error(`Error: ${resp.statusCode}. Full response: ${JSON.stringify(resp)}`);
+        logAndSend(`Error: ${resp.statusCode}. Full response: ${JSON.stringify(resp)}`);
         throw new Error(`Error occurred while selling: ${resp.statusCode}`);
       }
 
       const soldPrice = resp.body.fills.reduce((total, fill) => total + (+fill.price * fill.qty), 0) / resp.body.fills.reduce((total, fill) => total + (+fill.qty), 0);
 
-      console.log(`Successfully sold ${qty} ${symbol} at an average price of ${soldPrice}.`);
+      logAndSend(`Successfully sold ${qty} ${symbol} at an average price of ${soldPrice}.`);
 
       return resp.body;
     } catch (err) {
-      console.error(`Error occurred while selling: ${err.message}`);
+      logAndSend(`Error occurred while selling: ${err.message}`);
       if (qty > 0) {
-        console.log("Reducing quantity by 1 and retrying sell operation...");
+        logAndSend("Reducing quantity by 1 and retrying sell operation...");
         return sellWithTime({ keys, symbol, qty: qty - 1, timegap, buyPrice, sloss, immediate: true });
       } else {
         throw err;
@@ -213,5 +239,21 @@ const sellWithPrice = async ({ keys, buyPrice, symbol, qty, profit, sloss }) => 
     throw err;
   }
 };
+
+function logAndSend(message) {
+  console.log(message, getTime());
+  axios.post(discord_link, {
+    content: `${message}, ${getTime()}`
+  })
+      .catch(err => {
+        console.error('Error sending Discord notification', err);
+      });
+}
+
+function getTime() {
+  return moment().tz("Asia/Seoul").format('YYYY.MM.DD hh:mm:ss.SSS A');
+}
+
+
 
 module.exports = { loadeInfo, getQty, buy, sellWithPrice, sellWithTime };

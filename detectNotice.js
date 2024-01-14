@@ -36,13 +36,7 @@ const getFromBithumb = async (test = false, alert = false) => {
         }
     } catch (error) {
         if (alert) {
-            console.error(`Error occurred while checking Bithumb notices: ${error.message}`, getTime());
-            axios.post(discord_link, {
-                content: `Error occurred while checking Bithumb notices: ${error.message}, ${getTime()}`
-            })
-                .catch(err => {
-                    console.error('Error sending Discord notification', err);
-                });
+            logAndSend(`Error occurred while checking Bithumb notices: ${error.message}`);
         }
     }
 };
@@ -75,13 +69,7 @@ const getFromBithumbMobile = async (test = false, alert = false) => {
         }
     } catch (error) {
         if (alert) {
-            console.error(`Error occurred while checking Bithumb notices Mobile: ${error.message}`, getTime());
-            axios.post(discord_link, {
-                content: `Error occurred while checking Bithumb notices Mobile: ${error.message}, ${getTime()}`
-            })
-                .catch(err => {
-                    console.error('Error sending Discord notification', err);
-                });
+            logAndSend(`Error occurred while checking Bithumb notices Mobile: ${error.message}`);
         }
     }
 };
@@ -89,8 +77,8 @@ const getFromBithumbMobile = async (test = false, alert = false) => {
 const startBithumbDetect = async() => {
     let lastNoticeInfoMobile = await getFromBithumbMobile()
     let lastNoticeInfo = await getFromBithumb()
-    console.log(`Last Notice title for Bithumb PC is ${lastNoticeInfo.title}`, getTime())
-    console.log(`Last Notice title for Bithumb Mobile is ${lastNoticeInfoMobile.title}`, getTime())
+    logAndSend(`Last Notice title for Bithumb PC is ${lastNoticeInfo.title}`)
+    logAndSend(`Last Notice title for Bithumb Mobile is ${lastNoticeInfo.title}`)
     const symbols = [];
     let i = 0
     setInterval(async () => {
@@ -105,7 +93,8 @@ const startBithumbDetect = async() => {
         }
         const newNoticeTitle = lastNoticeInfo.id !== noticeInfo.id ? noticeInfo.title : noticeInfoMobile.title
         const from = lastNoticeInfo.id !== noticeInfo.id ? 'pc' : 'mobile'
-        console.log(`New Notice title is ${newNoticeTitle} from Bithumb ${from}`, getTime())
+        logAndSend(`New Notice title is ${newNoticeTitle} from Bithumb ${from}`)
+
         const new_listing_symbol = newNoticeTitle.match(/\(([^)]+)\)/g);
         new_listing_symbol.forEach((e) => {
             const symbol = e.replace('(', '').replace(')', '');
@@ -152,7 +141,7 @@ const getFromUpbit = async(test = false, alert = false) => {
 
 const startUpbitDetect = async() => {
     let lastNoticeInfo = await getFromUpbit()
-    console.log(`Last Notice title for Upbit is ${lastNoticeInfo.title}`, getTime())
+    logAndSend(`Last Notice title for Upbit is ${lastNoticeInfo.title}`)
     const symbols = [];
     let i = 0
     setInterval(async () => {
@@ -164,7 +153,7 @@ const startUpbitDetect = async() => {
         if (!noticeInfo.title.includes('[거래]') || !noticeInfo.title.includes('추가')) {
             return;
         }
-        console.log(`New Notice title is ${noticeInfo.title} from Upbit`, getTime())
+        logAndSend(`New Notice title is ${noticeInfo.title} from Upbit`)
         const new_listing_symbol = noticeInfo.title.match(/\(([^)]+)\)/g);
         new_listing_symbol.forEach((e) => {
             const symbol = e.replace('(', '').replace(')', '');
@@ -185,6 +174,16 @@ const startUpbitDetect = async() => {
 
 function getTime() {
     return moment().tz("Asia/Seoul").format('YYYY.MM.DD hh:mm:ss.SSS A');
+}
+
+function logAndSend(message) {
+    console.error(message, getTime());
+    axios.post(discord_link, {
+        content: `${message}, ${getTime()}`
+    })
+        .catch(err => {
+            console.error('Error sending Discord notification', err);
+        });
 }
 
 module.exports = { startBithumbDetect, startUpbitDetect };

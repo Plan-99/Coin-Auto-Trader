@@ -79,20 +79,6 @@ detectE.on('NEWLISTING', async (data) => {
         sloss,
       });
     }
-
-    if (sellResponse !== null) {
-      const sellPrice =
-          sellResponse.fills.reduce((a, d) => a + d.price * d.qty, 0) /
-          sellResponse.fills.reduce((a, d) => a + d.qty, 0);
-      log(`Sell price is ${sellPrice} and sell quantity is ${qty} at ${getTime()}`);
-
-      axios.post(discordWebhookUrl, {
-        content: `Sell price is ${sellPrice} and sell quantity is ${qty} at ${getTime()}`
-      })
-          .catch(err => {
-            console.error('Error sending Discord notification', err);
-          });
-    }
   } catch (err) {
     log(err, getTime());
     axios.post(discordWebhookUrl, {
@@ -145,3 +131,4 @@ setInterval(() => {
     console.error('Error sending Discord notification', err);
   });
 }, 300000); // 300000 milliseconds is equal to 5 minutes
+
