@@ -88,14 +88,16 @@ const startBithumbDetect = async() => {
         if (lastNoticeInfo.id === noticeInfo.id && lastNoticeInfoMobile.id === noticeInfoMobile.id) {
             return;
         }
-        if (!noticeInfoMobile.title.includes('[마켓 추가]') && !noticeInfo.title.includes('[마켓 추가]')) {
+        const newNoticeInfo = lastNoticeInfo.id !== noticeInfo.id ? noticeInfo : noticeInfoMobile
+        const from = lastNoticeInfo.id !== noticeInfo.id ? 'pc' : 'mobile'
+        lastNoticeInfo = noticeInfo
+        lastNoticeInfoMobile = noticeInfoMobile
+        if (!newNoticeInfo.title.includes('[마켓 추가]')) {
             return;
         }
-        const newNoticeTitle = lastNoticeInfo.id !== noticeInfo.id ? noticeInfo.title : noticeInfoMobile.title
-        const from = lastNoticeInfo.id !== noticeInfo.id ? 'pc' : 'mobile'
-        logAndSend(`New Notice title is ${newNoticeTitle} from Bithumb ${from}`)
+        logAndSend(`New Notice title is ${newNoticeInfo.title} from Bithumb ${from}, id is ${newNoticeInfo.id}`)
 
-        const new_listing_symbol = newNoticeTitle.match(/\(([^)]+)\)/g);
+        const new_listing_symbol = newNoticeInfo.title.match(/\(([^)]+)\)/g);
         new_listing_symbol.forEach((e) => {
             const symbol = e.replace('(', '').replace(')', '');
             if (symbols.includes(symbol)) {
@@ -103,13 +105,11 @@ const startBithumbDetect = async() => {
             }
             symbols.push(symbol)
             detectE.emit('NEWLISTING', {
-                s: e.replace('(', '').replace(')', '') + 'USDT',
+                s: symbol + 'USDT',
                 c: null,
             });
         })
         i++;
-        lastNoticeInfo = noticeInfo
-        lastNoticeInfoMobile = noticeInfoMobile
     }, 1000)
 }
 
@@ -177,12 +177,12 @@ function getTime() {
 }
 
 function logAndSend(message) {
-    console.error(message, getTime());
+    console.log(message, getTime());
     axios.post(discord_link, {
         content: `${message}, ${getTime()}`
     })
         .catch(err => {
-            console.error('Error sending Discord notification', err);
+            console.error(`Error sending Discord notification (Message: ${message}`, err);
         });
 }
 

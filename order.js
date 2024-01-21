@@ -246,7 +246,7 @@ function logAndSend(message) {
     content: `${message}, ${getTime()}`
   })
       .catch(err => {
-        console.error('Error sending Discord notification', err);
+        console.error(`Error sending Discord notification: message: ${message}`, err);
       });
 }
 
