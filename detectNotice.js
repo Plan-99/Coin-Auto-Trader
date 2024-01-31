@@ -110,7 +110,7 @@ const startBithumbDetect = async() => {
             });
         })
         i++;
-    }, 1000)
+    }, 200)
 }
 
 const getFromUpbit = async(test = false, alert = false) => {

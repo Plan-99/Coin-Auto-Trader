@@ -91,7 +91,11 @@ const sellWithTime = async ({ keys, symbol, qty, timegap, buyPrice, sloss, immed
       slossSell = true;
     } catch (err) {
       logAndSend(`Error while SLOSS Selling: ${err.message}`);
-      return sellWithTime({ keys, symbol, qty: qty - 1, timegap, buyPrice, sloss, immediate: false });
+      if (qty > 1) {
+        return sellWithTime({ keys, symbol, qty: qty - 1, timegap, buyPrice, sloss, immediate: false });
+      } else {
+        logAndSend(`Error while SLOSS Selling: qty = 0`);
+      }
     }
     let countdown = timegap; //time constant
     let orderResp = {};
