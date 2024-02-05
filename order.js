@@ -12,6 +12,7 @@ const scientificToDecimal = require('scientific-to-decimal');
 const axios = require("axios");
 const moment = require("moment");
 let { discord_link } = process.env;
+const { XCoinAPI } = require("./bithumb")
 
 const loadeInfo = async ({ symbol }) => {
   try {
@@ -53,7 +54,13 @@ const buy = async ({ keys, symbol, usdt }) => {
       },
     });
     if (resp?.statusCode !== 200) throw resp;
-    return resp.body;
+    const price = resp.fills.reduce((a, d) => a + d.price * d.qty, 0) / resp.fills.reduce((a, d) => a + d.qty * 1, 0)
+    const qty = resp.body.executedQty
+    logAndSend(`Buy price is ${price} at ${getTime()} and qty is ${qty}`)
+    return {
+      qty,
+      price,
+    };
   } catch (err) {
     throw err;
   }
@@ -244,6 +251,29 @@ const sellWithPrice = async ({ keys, buyPrice, symbol, qty, profit, sloss }) => 
   }
 };
 
+const buyBithumb = async ({ keys, symbol, krw }) => {
+  try {
+    const bithumbApi = new XCoinAPI(keys.api_key, keys.api_secret)
+    const resp1 = await axios.get(`https://api.bithumb.com/public/transaction_history/${symbol}_KRW`)
+    const bidData = resp1.data.data.filter((e) => e.type === 'bid')
+    const price = bidData[bidData.length - 1].price
+    const qty = Math.floor(krw / price)
+    // keys: { api, sec }, quantity, symbol
+    const resp = await bithumbApi.xcoinApiCall('/trade/market_buy', {
+      units: String(qty),
+      order_currency: symbol,
+      payment_currency: 'KRW',
+    });
+    logAndSend(`Buy price is ${price} at ${getTime()} and qty is ${qty}`)
+    return {
+      qty, price
+    };
+  } catch (err) {
+    throw err;
+  }
+};
+
+
 function logAndSend(message) {
   console.log(message, getTime());
   axios.post(discord_link, {
@@ -259,5 +289,4 @@ function getTime() {
 }
 
 
-
-module.exports = { loadeInfo, getQty, buy, sellWithPrice, sellWithTime };
+module.exports = { loadeInfo, getQty, buy, sellWithPrice, sellWithTime, buyBithumb };
